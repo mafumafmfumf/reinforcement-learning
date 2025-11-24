@@ -4,7 +4,7 @@ from itertools import cycle
 import pygame
 
 import os
-# os.environ["SDL_VIDEODRIVER"] = "dummy"
+#os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 def load():
     # path of player with different states

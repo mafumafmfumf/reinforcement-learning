@@ -52,7 +52,7 @@ class NeuralNetwork(nn.Module):
         out = F.relu(out)
         out = out.view(out.size(0),-1)
         out = self.fc4(out)
-        out = F.relu(self.fc4(out))
+        out = F.relu(out)
         out = self.fc5(out)
 
 
@@ -89,7 +89,7 @@ def train(model, start, iteration = 0):
     ##############################################################
     ################### YOUR CODE HERE  Part 4 ###################
     # 定义Adam优化器，学习率为1e-6
-    optimizer = Adam(model.parameters(), lr=1e-6)
+    optimizer = optim.Adam(model.parameters(), lr=1e-6)
 
     # 使用MSE loss作为损失函数
     criterion = nn.MSELoss()
@@ -171,12 +171,14 @@ def train(model, start, iteration = 0):
         action_batch = torch.cat(tuple(d[1] for d in minibatch))
         reward_batch = torch.cat(tuple(d[2] for d in minibatch))
         state_1_batch = torch.cat(tuple(d[3] for d in minibatch))
+        terminal_flags = torch.tensor([float(d[4]) for d in minibatch], dtype=torch.float32)
 
         if torch.cuda.is_available():  # 如果CUDA可用，将数据放到GPU上
             state_batch = state_batch.cuda()
             action_batch = action_batch.cuda()
             reward_batch = reward_batch.cuda()
             state_1_batch = state_1_batch.cuda()
+            terminal_flags = terminal_flags.cuda()
 
         # 下一状态的神经网络输出
         output_1_batch = model(state_1_batch)
@@ -184,11 +186,12 @@ def train(model, start, iteration = 0):
         # 接下来，计算每个采样状态的q_target，它是一个向量。
         # 其每个元素，如果状态是终止状态，那么是r_j，否则是 r_j + gamma * max_a' Q(s_j+1, a')
         # 这里可以写一个for循环，对于每个状态，计算y_j并加入q_target中；也可以直接用向量运算，计算所有状态的q_target
-        q_target = reward_batch + gamma * torch.max(output_1_batch, dim=1)[0] * (1 - torch.tensor([d[4] for d in minibatch], dtype=torch.float32) )
+        q_target = reward_batch + model.gamma * torch.max(output_1_batch, dim=1)[0].unsqueeze(1) * (1 - terminal_flags).unsqueeze(1)
         
 
         # 计算每个状态的Q(s, a)。q_value是一个向量，每个元素是batch中每个状态的Q值，由神经网络输出得到
-        q_value = model(state_batch).gather(1, action_batch)
+
+        q_value = model(state_batch).gather(1, torch.argmax(action_batch, dim=1, keepdim=True).long())
         ######################## END YOUR CODE #######################
         ##############################################################
 
@@ -270,7 +273,7 @@ def main(mode):            # 主函数
 
     if mode == 'test':                                # 如果mode是test，加载模型并测试
         model = torch.load(                           # 加载模型，如果CUDA可用，将模型放到GPU上
-            'pretrained_model/current_model_1000000.pth',
+            'pretrained_model/current_model_750000.pth',
             map_location='cpu' if not cuda_is_available else None
         ).eval()
 
