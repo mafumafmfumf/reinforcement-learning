@@ -50,7 +50,7 @@ class NeuralNetwork(nn.Module):
         out = F.relu(out)
         out = self.conv3(out)
         out = F.relu(out)
-        out = out.view(out.size(0), -1)
+        out = out.view(out.size(0),-1)
         out = self.fc4(out)
         out = F.relu(self.fc4(out))
         out = self.fc5(out)
@@ -89,10 +89,10 @@ def train(model, start, iteration = 0):
     ##############################################################
     ################### YOUR CODE HERE  Part 4 ###################
     # 定义Adam优化器，学习率为1e-6
-    optimizer = 
+    optimizer = Adam(model.parameters(), lr=1e-6)
 
     # 使用MSE loss作为损失函数
-    criterion = 
+    criterion = nn.MSELoss()
     ######################## END YOUR CODE #######################
     ##############################################################
 
@@ -184,11 +184,11 @@ def train(model, start, iteration = 0):
         # 接下来，计算每个采样状态的q_target，它是一个向量。
         # 其每个元素，如果状态是终止状态，那么是r_j，否则是 r_j + gamma * max_a' Q(s_j+1, a')
         # 这里可以写一个for循环，对于每个状态，计算y_j并加入q_target中；也可以直接用向量运算，计算所有状态的q_target
-        q_target = 
+        q_target = reward_batch + gamma * torch.max(output_1_batch, dim=1)[0] * (1 - torch.tensor([d[4] for d in minibatch], dtype=torch.float32) )
         
 
         # 计算每个状态的Q(s, a)。q_value是一个向量，每个元素是batch中每个状态的Q值，由神经网络输出得到
-        q_value = 
+        q_value = model(state_batch).gather(1, action_batch)
         ######################## END YOUR CODE #######################
         ##############################################################
 
@@ -200,15 +200,16 @@ def train(model, start, iteration = 0):
         
 
         # 清空梯度
-
+        optimizer.zero_grad()  
 
         # 计算loss
-
+        loss = nn.MSELoss()(q_value, q_target)
 
         # 反向传播计算梯度
-
+        loss.backward() 
 
         # 执行一步参数更新
+        optimizer.step()
 
 
         ######################## END YOUR CODE #######################
